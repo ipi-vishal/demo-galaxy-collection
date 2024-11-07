@@ -1,2 +1,3 @@
-# demo-galaxy-collection
-this is demo galaxy collection repository
+# Ansible Collection - ipinf.demo
+
+Documentation for the collection.
