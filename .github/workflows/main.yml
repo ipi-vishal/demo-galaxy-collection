@@ -1,12 +1,58 @@
-name: My Workflow
+name: Jira Integration and PR Notification
+
 on:
-  push:
-    branches:
-      - main
+  pull_request:
+    types:
+      - opened
+      - edited
+      - synchronize
+
 jobs:
-  build:
+  create_jira_issue_or_comment:
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v2
-      - name: Run a script
-        run: echo "Hello, world!"
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Create Jira issue or comment
+        env:
+          JIRA_URL: ${{ secrets.JIRA_URL }}
+          JIRA_USERNAME: ${{ secrets.JIRA_USERNAME }}
+          JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+        run: |
+          # Function to create a Jira issue
+          create_jira_issue() {
+            curl -u "$JIRA_USERNAME:$JIRA_API_TOKEN" -X POST \
+              -H "Content-Type: application/json" \
+              -d '{
+                "fields": {
+                  "project": { "key": "YOUR_PROJECT_KEY" },
+                  "summary": "GitHub PR: '${{ github.event.pull_request.title }}'",
+                  "description": "PR created in GitHub: '${{ github.event.pull_request.body }}'",
+                  "issuetype": { "name": "Bug" }
+                }
+              }' \
+              "$JIRA_URL/rest/api/2/issue/"
+          }
+
+          # Create Jira issue when a pull request is opened
+          if [[ "${{ github.event_name }}" == "pull_request" && "${{ github.event.action }}" == "opened" ]]; then
+            create_jira_issue
+          fi
+
+      - name: Send Email Notification
+        if: github.event.action == 'opened'
+        run: |
+          # Define email details
+          SMTP_SERVER="smtp.gmail.com"
+          SMTP_PORT="587"
+          SMTP_USERNAME="vishal.doni@ipinfusion.com"  # Replace with your Gmail address
+          SMTP_PASSWORD="your-app-password"     # Replace with your Gmail app password
+          RECIPIENT_EMAIL="vishal.doni@ipinfusion.com"  # Replace with the recipient's email
+          SUBJECT="New Pull Request Created: ${{ github.event.pull_request.title }}"
+          BODY="A new pull request has been created in the GitHub repository.\n\nTitle: ${{ github.event.pull_request.title }}\nDescription: ${{ github.event.pull_request.body }}\n\nView PR: ${{ github.event.pull_request.html_url }}"
+
+          # Send the email via Gmail SMTP
+          echo -e "Subject:${SUBJECT}\n${BODY}" | \
+            mailx -v -S smtp=$SMTP_SERVER:$SMTP_PORT -S smtp-auth=login -S smtp-auth-user=$SMTP_USERNAME -S smtp-auth-password=$SMTP_PASSWORD -S from="noreply@github.com" $RECIPIENT_EMAIL
