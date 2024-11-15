@@ -1,0 +1,48 @@
+name: Create Jira Ticket on Pull Request
+
+on:
+  pull_request:
+    types: [opened]
+
+jobs:
+  create-jira-issue:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Create Jira Issue
+        id: create_jira
+        uses: atlassian/gajira-create@v3
+        env:
+          JIRA_BASE_URL: ${{ secrets.JIRA_BASE_URL }}
+          JIRA_USER_EMAIL: ${{ secrets.JIRA_USER_EMAIL }}
+          JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+        with:
+          project: ${{ secrets.JIRA_PROJECT_KEY }}
+          summary: "New PR: ${{ github.event.pull_request.title }}"
+          description: |
+            A new pull request has been created by ${{ github.actor }}.
+            - **PR Title**: ${{ github.event.pull_request.title }}
+            - **PR Link**: ${{ github.event.pull_request.html_url }}
+            - **Repository**: ${{ github.repository }}
+            - **Branch**: ${{ github.event.pull_request.head.ref }}
+          issuetype: Task
+
+      - name: Send Email Notification
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 587
+          username: ${{ secrets.EMAIL_USERNAME }}
+          password: ${{ secrets.EMAIL_PASSWORD }}
+          subject: "New Pull Request Notification - ${{ github.event.pull_request.title }}"
+          to: "vishal.doni@ipinfusion.com"
+          from: "vishal.doni@ipinfusion.com"
+          body: |
+            A new pull request has been created in the repository.
+            
+            **PR Title**: ${{ github.event.pull_request.title }}
+            **Author**: ${{ github.actor }}
+            **Link**: ${{ github.event.pull_request.html_url }}
