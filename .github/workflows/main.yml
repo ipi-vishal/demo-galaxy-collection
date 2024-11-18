@@ -23,17 +23,32 @@ jobs:
         run: |
           # Function to create a Jira issue
           create_jira_issue() {
-            curl -u "$JIRA_USERNAME:$JIRA_API_TOKEN" -X POST \
-              -H "Content-Type: application/json" \
-              -d '{
-                "fields": {
-                  "project": { "key": "YOUR_PROJECT_KEY" },
-                  "summary": "GitHub PR: '${{ github.event.pull_request.title }}'",
-                  "description": "PR created in GitHub: '${{ github.event.pull_request.body }}'",
-                  "issuetype": { "name": "Bug" }
-                }
-              }' \
-              "$JIRA_URL/rest/api/2/issue/"
+            curl -X POST \
+  -u "$JIRA_USERNAME:$JIRA_API_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "fields": {
+      "project": { "key": "$JIRA_PROJECT_KEY" },
+      "summary": "Sample issue2 created from CLI",
+      "description": {
+        "type": "doc",
+        "version": 1,
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "demo jira created using restapi "
+              }
+            ]
+          }
+        ]
+      },
+      "issuetype": { "name": "Task" }
+    }
+  }' \
+  "$JIRA_URL/rest/api/3/issue/"
           }
 
           # Create Jira issue when a pull request is opened
