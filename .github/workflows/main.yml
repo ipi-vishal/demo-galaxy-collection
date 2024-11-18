@@ -11,7 +11,7 @@ jobs:
   create_jira_issue_or_comment:
     runs-on: ubuntu-latest
 
-   steps:
+    steps:
       - name: Checkout repository
         uses: actions/checkout@v2
 
