@@ -20,39 +20,40 @@ jobs:
           JIRA_URL: ${{ secrets.JIRA_URL }}
           JIRA_USERNAME: ${{ secrets.JIRA_USERNAME }}
           JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+          JIRA_PROJECT_KEY: ${{ secrets.JIRA_PROJECT_KEY }}
         run: |
           # Function to create a Jira issue
           create_jira_issue() {
             curl -X POST \
-  -u "$JIRA_USERNAME:$JIRA_API_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "fields": {
-      "project": { "key": "$JIRA_PROJECT_KEY" },
-      "summary": "Sample issue2 created from CLI",
-      "description": {
-        "type": "doc",
-        "version": 1,
-        "content": [
-          {
-            "type": "paragraph",
-            "content": [
-              {
-                "type": "text",
-                "text": "demo jira created using restapi "
-              }
-            ]
-          }
-        ]
-      },
-      "issuetype": { "name": "Task" }
-    }
-  }' \
-  "$JIRA_URL/rest/api/3/issue/"
+              -u "$JIRA_USERNAME:$JIRA_API_TOKEN" \
+              -H "Content-Type: application/json" \
+              -d '{
+                "fields": {
+                  "project": { "key": "'"$JIRA_PROJECT_KEY"'" },
+                  "summary": "Sample issue created from CLI",
+                  "description": {
+                    "type": "doc",
+                    "version": 1,
+                    "content": [
+                      {
+                        "type": "paragraph",
+                        "content": [
+                          {
+                            "type": "text",
+                            "text": "Demo Jira issue created using REST API"
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  "issuetype": { "name": "Task" }
+                }
+              }' \
+              "$JIRA_URL/rest/api/3/issue/"
           }
 
-          # Create Jira issue when a pull request is opened
-          if [[ "${{ github.event_name }}" == "pull_request" && "${{ github.event.action }}" == "opened" ]]; then
+          # Check if the event is a pull request and the action is "opened"
+          if [[ "${{ github.event.action }}" == "opened" ]]; then
             create_jira_issue
           fi
 
