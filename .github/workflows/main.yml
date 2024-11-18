@@ -25,12 +25,12 @@ jobs:
           # Function to create a Jira issue
           create_jira_issue() {
             curl -X POST \
-              -u "$JIRA_USERNAME:$JIRA_API_TOKEN" \
+              -u "vishal.doni@ipinfusion.com:ATATT3xFfGF0Uo44GSz8VdLViu7bbiFo6oexzKPmGpR26fkrb1Na-DqLB1KVe11EMCvuY0Oy9p5Wtf6z7LBuauBp10mQAYR8DhaoigC7xa__VP83UJe2xf143P6nku8f85AN204hwPvpsDX2E2OeN4lUNLfBxc_bh4kqy3P0RsE42iNNbMSl7YA=0C22DD2A" \
               -H "Content-Type: application/json" \
               -d '{
                 "fields": {
-                  "project": { "key": "'"$JIRA_PROJECT_KEY"'" },
-                  "summary": "Sample issue created from CLI",
+                  "project": { "key": "'"DEVOPS"'" },
+                  "summary": "demo jira created trial 2",
                   "description": {
                     "type": "doc",
                     "version": 1,
@@ -40,7 +40,7 @@ jobs:
                         "content": [
                           {
                             "type": "text",
-                            "text": "Demo Jira issue created using REST API"
+                            "text": "Demo Jira issue for github to jira integration"
                           }
                         ]
                       }
@@ -49,7 +49,7 @@ jobs:
                   "issuetype": { "name": "Task" }
                 }
               }' \
-              "$JIRA_URL/rest/api/3/issue/"
+              "https://ipinfusion-sandbox-169.atlassian.net/rest/api/3/issue/"
           }
 
           # Check if the event is a pull request and the action is "opened"
