@@ -10,12 +10,29 @@ on:
     types:
       - opened
       - edited
-
+env:
+  # Setting an environment variable with the value of a configuration variable
+  env_var: ${{ vars.ENV_CONTEXT_VAR }}
+  
 jobs:
   create_jira_ticket_github_prs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Use variables
+      run: |
+           echo "Event Name: $GITHUB_EVENT_NAME"
+           echo "Event Action: $GITHUB_EVENT_ACTION"
+           echo "JIRA_API_TOKEN: $JIRA_API_TOKEN"
+           echo "JIRA_PROJECT_KEY: $JIRA_PROJECT_KEY"
+           echo "JIRA_USERNAME: $JIRA_USERNAME"
+           echo "JIRA_IRL: $JIRA_URL"
+      env:
+        JIRA_API_TOKEN: ${{ vars.JIRA_API_TOKEN }}
+        JIRA_PROJECT_KEY: ${{ vars.JIRA_PROJECT_KEY }}
+        JIRA_API_TOKEN: ${{ vars.JIRA_API_TOKEN }}
+        JIRA_URL: ${{ vars.JIRA_URL }}
+        
       - name: Checkout repository
         uses: actions/checkout@v2
       - name: Set Event Data
@@ -44,10 +61,10 @@ jobs:
           echo "Summary: $SUMMARY"
       - name: Create Jira ticket for github actions
         env:
-          JIRA_URL: ${{ secrets.JIRA_URL }}
-          JIRA_USERNAME: ${{ secrets.JIRA_USERNAME }}
-          JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
-          JIRA_PROJECT_KEY: ${{ secrets.JIRA_PROJECT_KEY }}
+          JIRA_URL: ${{ vars.JIRA_URL }}
+          JIRA_USERNAME: ${{ vars.JIRA_USERNAME }}
+          JIRA_API_TOKEN: ${{ vars.JIRA_API_TOKEN }}
+          JIRA_PROJECT_KEY: ${{ vars.JIRA_PROJECT_KEY }}
         run: |
           # Function to create a Jira issue
           create_jira_issue() {
