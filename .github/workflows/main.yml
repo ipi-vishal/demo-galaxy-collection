@@ -1,4 +1,4 @@
-name: Jira Integration and Notification
+name: JIRA INTEGRATION WITH GITHUB ACTIONS WITH API
 
 on:
   pull_request:
@@ -18,7 +18,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v2
 
-      - name: Create Jira issue or comment
+      - name: Create Jira ticket for github PRS/Issues
         env:
           JIRA_URL: ${{ secrets.JIRA_URL }}
           JIRA_USERNAME: ${{ secrets.JIRA_USERNAME }}
@@ -27,6 +27,12 @@ jobs:
           GITHUB_EVENT_NAME: ${{ github.event_name }}
           GITHUB_EVENT_ACTION: ${{ github.event.action }}
         run: |
+        echo "Event Name: $GITHUB_EVENT_NAME"
+        echo "Event Action: $GITHUB_EVENT_ACTION"
+        echo "JIRA_API_TOKEN: $JIRA_API_TOKEN"
+        echo "JIRA_PROJECT_KEY: $JIRA_PROJECT_KEY"
+        echo "JIRA_USERNAME: $JIRA_USERNAME"
+        echo "JIRA_URL: $JIRA_URL"
           # Function to create a Jira issue
           create_jira_issue() {
             curl -X POST \
