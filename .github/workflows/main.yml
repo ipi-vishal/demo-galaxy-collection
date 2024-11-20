@@ -1,12 +1,58 @@
-name: My Workflow
+name: Jira Integration and PR Notification
+
 on:
-  push:
-    branches:
-      - main
+  pull_request:
+    types:
+      - opened
+      - edited
+      - synchronize
+
 jobs:
-  build:
+  create_jira_ticket_github_prs:
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v2
-      - name: Run a script
-        run: echo "Hello, world!"
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Create Jira ticket for github actions
+        env:
+          JIRA_URL: ${{ secrets.JIRA_URL }}
+          JIRA_USERNAME: ${{ secrets.JIRA_USERNAME }}
+          JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+          JIRA_PROJECT_KEY: ${{ secrets.JIRA_PROJECT_KEY }}
+        run: |
+          # Function to create a Jira issue
+          create_jira_issue() {
+            curl -X POST \
+              -u "vishal.doni@ipinfusion.com:ATATT3xFfGF0Uo44GSz8VdLViu7bbiFo6oexzKPmGpR26fkrb1Na-DqLB1KVe11EMCvuY0Oy9p5Wtf6z7LBuauBp10mQAYR8DhaoigC7xa__VP83UJe2xf143P6nku8f85AN204hwPvpsDX2E2OeN4lUNLfBxc_bh4kqy3P0RsE42iNNbMSl7YA=0C22DD2A" \
+              -H "Content-Type: application/json" \
+              -d '{
+                "fields": {
+                  "project": { "key": "'"DEVOPS"'" },
+                  "summary": "demo jira created trial 2",
+                  "description": {
+                    "type": "doc",
+                    "version": 1,
+                    "content": [
+                      {
+                        "type": "paragraph",
+                        "content": [
+                          {
+                            "type": "text",
+                            "text": "Demo Jira issue for github to jira integration"
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  "issuetype": { "name": "Task" }
+                }
+              }' \
+              "https://ipinfusion-sandbox-169.atlassian.net/rest/api/3/issue/"
+          }
+
+          # Check if the event is a pull request and the action is "opened"
+          if [[ "${{ github.event.action }}" == "opened" ]]; then
+            create_jira_issue
+          fi
