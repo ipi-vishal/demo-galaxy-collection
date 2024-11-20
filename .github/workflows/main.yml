@@ -67,7 +67,15 @@ jobs:
           else
             echo "No action required for event: $GITHUB_EVENT_NAME, action: $GITHUB_EVENT_ACTION."
           fi
-
+      - name: Debug Event Information
+        run: |
+           echo "Event Name: $GITHUB_EVENT_NAME"
+           echo "Event Action: $GITHUB_EVENT_ACTION"
+           echo "JIRA_API_TOKEN: $JIRA_API_TOKEN"
+           echo "JIRA_PROJECT_KEY: $JIRA_PROJECT_KEY"
+           echo "JIRA_USERNAME: $JIRA_USERNAME"
+           echo "JIRA_IRL: $JIRA_URL"
+           
 
       - name: Notify via Email
         if: always()
