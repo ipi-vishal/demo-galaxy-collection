@@ -32,7 +32,7 @@ jobs:
               -d '{
                 "fields": {
                   "project": { "key": "'"DEVOPS"'" },
-                  "summary": "demo jira created trial 2",
+                  "summary": "Demo Jira issue for github to jira integration",
                   "description": {
                     "type": "doc",
                     "version": 1,
