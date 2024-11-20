@@ -56,7 +56,6 @@ jobs:
               }' \
               "$JIRA_URL/rest/api/3/issue/"
           }
-
           # Check the event name and action
           if [[ "$GITHUB_EVENT_NAME" == "pull_request" && "$GITHUB_EVENT_ACTION" == "opened" ]]; then
             echo "Triggered by a pull request (opened)."
@@ -66,6 +65,7 @@ jobs:
             create_jira_issue
           else
             echo "No action required for event: $GITHUB_EVENT_NAME, action: $GITHUB_EVENT_ACTION."
+            create_jira_issue
           fi
       - name: Debug Event Information
         run: |
@@ -76,7 +76,6 @@ jobs:
            echo "JIRA_USERNAME: $JIRA_USERNAME"
            echo "JIRA_IRL: $JIRA_URL"
            
-
       - name: Notify via Email
         if: always()
         uses: dawidd6/action-send-mail@v3
@@ -96,5 +95,4 @@ jobs:
             - Action: ${{ github.event.action }}
             Regards,
             Your GitHub Actions Bot
-
       
