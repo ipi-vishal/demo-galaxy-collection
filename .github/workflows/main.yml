@@ -6,6 +6,10 @@ on:
       - opened
       - edited
       - synchronize
+  issues:
+    types:
+      - opened
+      - edited
 
 jobs:
   create_jira_ticket_github_prs:
@@ -14,7 +18,30 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
+      - name: Set Event Data
+        id: set_event_data
+        run: |
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            EVENT_TYPE="pull_request"
+            DESCRIPTION="${{ github.event.pull_request.body }}"
+            SUMMARY="${{ github.event.pull_request.title }}"
+          elif [[ "${{ github.event_name }}" == "issues" ]]; then
+            EVENT_TYPE="issues"
+            DESCRIPTION="${{ github.event.issue.body }}"
+            SUMMARY="${{ github.event.issue.title }}"
+          else
+            echo "Unsupported event type: ${{ github.event_name }}"
+            exit 1
+          fi
+          echo "EVENT_TYPE=$EVENT_TYPE" >> $GITHUB_ENV
+          echo "DESCRIPTION=$DESCRIPTION" >> $GITHUB_ENV
+          echo "SUMMARY=$SUMMARY" >> $GITHUB_ENV
 
+      - name: Debug Event Data
+        run: |
+          echo "Event Type: $EVENT_TYPE"
+          echo "Description: $DESCRIPTION"
+          echo "Summary: $SUMMARY"
       - name: Create Jira ticket for github actions
         env:
           JIRA_URL: ${{ secrets.JIRA_URL }}
@@ -30,7 +57,7 @@ jobs:
               -d '{
                 "fields": {
                   "project": { "key": "'"DEVOPS"'" },
-                  "summary": "demo jira created trial 2",
+                  "summary": "'"${SUMMARY}"'",
                   "description": {
                     "type": "doc",
                     "version": 1,
@@ -40,7 +67,7 @@ jobs:
                         "content": [
                           {
                             "type": "text",
-                            "text": "Demo Jira issue for github to jira integration"
+                            "text": "'"${DESCRIPTION}"'"
                           }
                         ]
                       }
