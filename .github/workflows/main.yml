@@ -10,93 +10,93 @@ on:
     types:
       - opened
       - edited
-env:
-  # Setting an environment variable with the value of a configuration variable
-  env_var: ${{ vars.ENV_CONTEXT_VAR }}
-  
+
 jobs:
   create_jira_ticket_github_prs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Use variables
-      run: |
-           echo "Event Name: $GITHUB_EVENT_NAME"
-           echo "Event Action: $GITHUB_EVENT_ACTION"
-           echo "JIRA_API_TOKEN: $JIRA_API_TOKEN"
-           echo "JIRA_PROJECT_KEY: $JIRA_PROJECT_KEY"
-           echo "JIRA_USERNAME: $JIRA_USERNAME"
-           echo "JIRA_IRL: $JIRA_URL"
-      env:
-        JIRA_API_TOKEN: ${{ vars.JIRA_API_TOKEN }}
-        JIRA_PROJECT_KEY: ${{ vars.JIRA_PROJECT_KEY }}
-        JIRA_API_TOKEN: ${{ vars.JIRA_API_TOKEN }}
-        JIRA_URL: ${{ vars.JIRA_URL }}
-        
+      - name: Use variables
+        run: |
+          echo "Event Name: $GITHUB_EVENT_NAME"
+          echo "Event Action: $GITHUB_EVENT_ACTION"
+          echo "JIRA_API_TOKEN: [HIDDEN]"
+          echo "JIRA_PROJECT_KEY: $JIRA_PROJECT_KEY"
+          echo "JIRA_USERNAME: $JIRA_USERNAME"
+          echo "JIRA_URL: $JIRA_URL"
+        env:
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
+          GITHUB_EVENT_ACTION: ${{ github.event.action }}
+          JIRA_API_TOKEN: ${{ vars.JIRA_API_TOKEN }}
+          JIRA_PROJECT_KEY: ${{ vars.JIRA_PROJECT_KEY }}
+          JIRA_USERNAME: ${{ vars.JIRA_USERNAME }}
+          JIRA_URL: ${{ vars.JIRA_URL }}
+
       - name: Checkout repository
         uses: actions/checkout@v2
+
       - name: Set Event Data
         id: set_event_data
         run: |
-          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+          if [ "${GITHUB_EVENT_NAME}" = "pull_request" ]; then
             EVENT_TYPE="pull_request"
             DESCRIPTION="${{ github.event.pull_request.body }}"
             SUMMARY="${{ github.event.pull_request.title }}"
-          elif [[ "${{ github.event_name }}" == "issues" ]]; then
+          elif [ "${GITHUB_EVENT_NAME}" = "issues" ]; then
             EVENT_TYPE="issues"
             DESCRIPTION="${{ github.event.issue.body }}"
             SUMMARY="${{ github.event.issue.title }}"
           else
-            echo "Unsupported event type: ${{ github.event_name }}"
+            echo "Unsupported event type: $GITHUB_EVENT_NAME"
             exit 1
           fi
           echo "EVENT_TYPE=$EVENT_TYPE" >> $GITHUB_ENV
           echo "DESCRIPTION=$DESCRIPTION" >> $GITHUB_ENV
           echo "SUMMARY=$SUMMARY" >> $GITHUB_ENV
+        env:
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
 
       - name: Debug Event Data
         run: |
           echo "Event Type: $EVENT_TYPE"
           echo "Description: $DESCRIPTION"
           echo "Summary: $SUMMARY"
-      - name: Create Jira ticket for github actions
+
+      - name: Create Jira Ticket for GitHub Actions
         env:
           JIRA_URL: ${{ vars.JIRA_URL }}
           JIRA_USERNAME: ${{ vars.JIRA_USERNAME }}
           JIRA_API_TOKEN: ${{ vars.JIRA_API_TOKEN }}
           JIRA_PROJECT_KEY: ${{ vars.JIRA_PROJECT_KEY }}
+          EVENT_TYPE: ${{ env.EVENT_TYPE }}
+          SUMMARY: ${{ env.SUMMARY }}
+          DESCRIPTION: ${{ env.DESCRIPTION }}
         run: |
           # Function to create a Jira issue
-          create_jira_issue() {
-            curl -X POST \
-              -u "$JIRA_USERNAME:$JIRA_API_TOKEN" \
-              -H "Content-Type: application/json" \
-              -d '{
-                "fields": {
-                  "project": { "key": "'"$JIRA_PROJECT_KEY"'" },
-                  "summary": "'"${SUMMARY}"'",
-                  "description": {
-                    "type": "doc",
-                    "version": 1,
-                    "content": [
-                      {
-                        "type": "paragraph",
-                        "content": [
-                          {
-                            "type": "text",
-                            "text": "'"${DESCRIPTION}"'"
-                          }
-                        ]
-                      }
-                    ]
-                  },
-                  "issuetype": { "name": "Task" }
-                }
-              }' \
-              "$JIRA_URL/rest/api/3/issue/"
-          }
+          curl -X POST \
+            -u "$JIRA_USERNAME:$JIRA_API_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "fields": {
+                "project": { "key": "'"$JIRA_PROJECT_KEY"'" },
+                "summary": "'"$SUMMARY"'",
+                "description": {
+                  "type": "doc",
+                  "version": 1,
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "type": "text",
+                          "text": "'"$DESCRIPTION"'"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "issuetype": { "name": "Task" }
+              }
+            }' \
+            "$JIRA_URL/rest/api/3/issue/"
 
-          # Check if the event is a pull request and the action is "opened"
-          if [[ "${{ github.event.action }}" == "opened" ]]; then
-            create_jira_issue
-          fi
