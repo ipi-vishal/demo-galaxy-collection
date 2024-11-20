@@ -1,4 +1,4 @@
-name: JIRA INTEGRATION WITH GITHUB ACTIONS WITH API
+name: Jira Integration and PR Notification
 
 on:
   pull_request:
@@ -9,7 +9,6 @@ on:
   issues:
     types:
       - opened
-
 jobs:
   create_jira_issue_or_comment:
     runs-on: ubuntu-latest
@@ -18,30 +17,22 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v2
 
-      - name: Create Jira ticket for github PRS/Issues
+      - name: Create Jira issue or comment
         env:
           JIRA_URL: ${{ secrets.JIRA_URL }}
           JIRA_USERNAME: ${{ secrets.JIRA_USERNAME }}
           JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
           JIRA_PROJECT_KEY: ${{ secrets.JIRA_PROJECT_KEY }}
-          GITHUB_EVENT_NAME: ${{ github.event_name }}
-          GITHUB_EVENT_ACTION: ${{ github.event.action }}
         run: |
-          echo "Event Name: $GITHUB_EVENT_NAME"
-          echo "Event Action: $GITHUB_EVENT_ACTION"
-          echo "JIRA_API_TOKEN: $JIRA_API_TOKEN"
-          echo "JIRA_PROJECT_KEY: $JIRA_PROJECT_KEY"
-          echo "JIRA_USERNAME: $JIRA_USERNAME"
-          echo "JIRA_URL: $JIRA_URL"
           # Function to create a Jira issue
           create_jira_issue() {
             curl -X POST \
-              -u "$JIRA_USERNAME:$JIRA_API_TOKEN" \
+              -u "vishal.doni@ipinfusion.com:ATATT3xFfGF0Uo44GSz8VdLViu7bbiFo6oexzKPmGpR26fkrb1Na-DqLB1KVe11EMCvuY0Oy9p5Wtf6z7LBuauBp10mQAYR8DhaoigC7xa__VP83UJe2xf143P6nku8f85AN204hwPvpsDX2E2OeN4lUNLfBxc_bh4kqy3P0RsE42iNNbMSl7YA=0C22DD2A" \
               -H "Content-Type: application/json" \
               -d '{
                 "fields": {
-                  "project": { "key": "'"$JIRA_PROJECT_KEY"'" },
-                  "summary": "Issue created for: '"$GITHUB_EVENT_NAME:$GITHUB_EVENT_ACTION"'",
+                  "project": { "key": "'"DEVOPS"'" },
+                  "summary": "demo jira created trial 2",
                   "description": {
                     "type": "doc",
                     "version": 1,
@@ -51,7 +42,7 @@ jobs:
                         "content": [
                           {
                             "type": "text",
-                            "text": "This issue was automatically created for a GitHub '"$GITHUB_EVENT_NAME"' event of type: '"$GITHUB_EVENT_ACTION"'"
+                            "text": "Demo Jira issue for github to jira integration"
                           }
                         ]
                       }
@@ -60,45 +51,10 @@ jobs:
                   "issuetype": { "name": "Task" }
                 }
               }' \
-              "$JIRA_URL/rest/api/3/issue/"
+              "https://ipinfusion-sandbox-169.atlassian.net/rest/api/3/issue/"
           }
-          # Check the event name and action
-          if [[ "$GITHUB_EVENT_NAME" == "pull_request" && "$GITHUB_EVENT_ACTION" == "opened" ]]; then
-            echo "Triggered by a pull request (opened)."
-            create_jira_issue
-          elif [[ "$GITHUB_EVENT_NAME" == "issues" && "$GITHUB_EVENT_ACTION" == "opened" ]]; then
-            echo "Triggered by a new issue (opened)."
-            create_jira_issue
-          else
-            echo "No action required for event: $GITHUB_EVENT_NAME, action: $GITHUB_EVENT_ACTION."
+          # Check if the event is a pull request and the action is "opened"
+          if [[ "${{ github.event.action }}" == "opened" ]]; then
             create_jira_issue
           fi
-      - name: Debug Event Information
-        run: |
-           echo "Event Name: $GITHUB_EVENT_NAME"
-           echo "Event Action: $GITHUB_EVENT_ACTION"
-           echo "JIRA_API_TOKEN: $JIRA_API_TOKEN"
-           echo "JIRA_PROJECT_KEY: $JIRA_PROJECT_KEY"
-           echo "JIRA_USERNAME: $JIRA_USERNAME"
-           echo "JIRA_IRL: $JIRA_URL"
-           
-      - name: Notify via Email
-        if: always()
-        uses: dawidd6/action-send-mail@v3
-        with:
-          server_address: smtp.gmail.com
-          server_port: 465
-          username: ${{ secrets.EMAIL_USERNAME }}
-          password: ${{ secrets.EMAIL_PASSWORD }}
-          subject: GitHub Actions Pipeline Notification
-          to: vishal.doni@ipinfusion.com,ramyashree.saliyan@ipinfusion.com
-          from: ${{ secrets.EMAIL_USERNAME }}
-          body: |
-            Hi Team,
-            The pipeline has completed. Here are the details:
-            - Repository: ${{ github.repository }}
-            - Event: ${{ github.event_name }}
-            - Action: ${{ github.event.action }}
-            Regards,
-            Your GitHub Actions Bot
-      
+
