@@ -8,14 +8,14 @@ on:
       - synchronize
 
 jobs:
-  create_jira_issue_or_comment:
+  create_jira_ticket_github_prs:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
 
-      - name: Create Jira issue or comment
+      - name: Create Jira ticket for github actions
         env:
           JIRA_URL: ${{ secrets.JIRA_URL }}
           JIRA_USERNAME: ${{ secrets.JIRA_USERNAME }}
@@ -56,19 +56,3 @@ jobs:
           if [[ "${{ github.event.action }}" == "opened" ]]; then
             create_jira_issue
           fi
-
-      - name: Send Email Notification
-        if: github.event.action == 'opened'
-        run: |
-          # Define email details
-          SMTP_SERVER="smtp.gmail.com"
-          SMTP_PORT="587"
-          SMTP_USERNAME="vishal.doni@ipinfusion.com"  # Replace with your Gmail address
-          SMTP_PASSWORD="your-app-password"     # Replace with your Gmail app password
-          RECIPIENT_EMAIL="vishal.doni@ipinfusion.com"  # Replace with the recipient's email
-          SUBJECT="New Pull Request Created: ${{ github.event.pull_request.title }}"
-          BODY="A new pull request has been created in the GitHub repository.\n\nTitle: ${{ github.event.pull_request.title }}\nDescription: ${{ github.event.pull_request.body }}\n\nView PR: ${{ github.event.pull_request.html_url }}"
-
-          # Send the email via Gmail SMTP
-          echo -e "Subject:${SUBJECT}\n${BODY}" | \
-            mailx -v -S smtp=$SMTP_SERVER:$SMTP_PORT -S smtp-auth=login -S smtp-auth-user=$SMTP_USERNAME -S smtp-auth-password=$SMTP_PASSWORD -S from="noreply@github.com" $RECIPIENT_EMAIL
