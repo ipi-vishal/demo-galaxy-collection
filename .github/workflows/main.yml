@@ -108,11 +108,14 @@ jobs:
           username: ${{ secrets.EMAIL_USERNAME }}
           password: ${{ secrets.EMAIL_PASSWORD }}
     # email subject
-          subject: ${{ github.job }} job of ${{ github.repository }} has ${{ job.status }}
+          subject: ${{ github.job }} job for ${{ github.repository }} has ${{ job.status }} 
     # email body as text
-          body: ${{ github.job }} job in worflow ${{ github.workflow }} of ${{ github.repository }} has ${{ job.status }}
+          body: ${{ github.job }} job in worflow ${{ github.workflow }} for ${{ github.repository }} has created new jira
     # comma-separated string, send email to
           to: ramyashree.saliyan@ipinfusion.com
     # from email name
           from: vishal.doni@ipinfusion.com
+          html: |
+            <h1>new jira has been created for ${{ github.event_name }}  </h1>
+            <p>Please track this issue in $JIRA_URL </p>
 
