@@ -115,7 +115,5 @@ jobs:
           to: ramyashree.saliyan@ipinfusion.com
     # from email name
           from: vishal.doni@ipinfusion.com
-          html: |
-            <h1>new jira has been created for ${{ github.event_name }}  </h1>
-            <p>Please track this issue in $JIRA_URL </p>
+          
 
