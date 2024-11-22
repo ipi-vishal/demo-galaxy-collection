@@ -108,11 +108,11 @@ jobs:
           username: ${{ secrets.EMAIL_USERNAME }}
           password: ${{ secrets.EMAIL_PASSWORD }}
     # email subject
-          subject: ${{ github.job }} job for ${{ github.repository }} has ${{ job.status }} 
+          subject: New issue is raised for ${{ github.repository }} for job ${{ github.job }} and pipeline is ${{ job.status }}
     # email body as text
           body: ${{ github.job }} job in worflow ${{ github.workflow }} for ${{ github.repository }} has created new jira
     # comma-separated string, send email to
-          to: ramyashree.saliyan@ipinfusion.com
+          to: ramyashree.saliyan@ipinfusion.com,vishal.doni@ipinfusion.com
     # from email name
           from: vishal.doni@ipinfusion.com
           
