@@ -10,6 +10,10 @@ on:
     types:
       - opened
       - edited
+  issue_comment:
+    types:
+      - created
+      - edited
 
 jobs:
   create_jira_ticket_github_prs:
@@ -20,7 +24,6 @@ jobs:
         run: |
           echo "Event Name: $GITHUB_EVENT_NAME"
           echo "Event Action: $GITHUB_EVENT_ACTION"
-
         env:
           GITHUB_EVENT_NAME: ${{ github.event_name }}
           GITHUB_EVENT_ACTION: ${{ github.event.action }}
@@ -32,8 +35,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v2
 
-      - name: Set Event Data
-        id: set_event_data
+      - name: Handle Events
+        id: handle_events
         run: |
           if [ "${GITHUB_EVENT_NAME}" = "pull_request" ]; then
             EVENT_TYPE="pull_request"
@@ -43,23 +46,38 @@ jobs:
             EVENT_TYPE="issues"
             DESCRIPTION="${{ github.event.issue.body }}"
             SUMMARY="${{ github.event.issue.title }}"
+          elif [ "${GITHUB_EVENT_NAME}" = "issue_comment" ]; then
+            EVENT_TYPE="issue_comment"
+            COMMENT="${{ github.event.comment.body }}"
+            ISSUE_NUMBER="${{ github.event.issue.number }}"
           else
             echo "Unsupported event type: $GITHUB_EVENT_NAME"
             exit 1
           fi
+          # Sanitize variables to handle special characters
+          DESCRIPTION=$(echo "$DESCRIPTION" | tr -d '\n' | tr -d '\r')
+          SUMMARY=$(echo "$SUMMARY" | tr -d '\n' | tr -d '\r')
+          COMMENT=$(echo "$COMMENT" | tr -d '\n' | tr -d '\r')
+
           echo "EVENT_TYPE=$EVENT_TYPE" >> $GITHUB_ENV
           echo "DESCRIPTION=$DESCRIPTION" >> $GITHUB_ENV
           echo "SUMMARY=$SUMMARY" >> $GITHUB_ENV
-        env:
-          GITHUB_EVENT_NAME: ${{ github.event_name }}
+          echo "COMMENT=$COMMENT" >> $GITHUB_ENV
+          echo "ISSUE_NUMBER=$ISSUE_NUMBER" >> $GITHUB_ENV
 
       - name: Debug Event Data
         run: |
           echo "Event Type: $EVENT_TYPE"
           echo "Description: $DESCRIPTION"
           echo "Summary: $SUMMARY"
+          echo "Comment: $COMMENT"
+          echo "Issue Number: $ISSUE_NUMBER"
+          echo "Sanitized Description: $DESCRIPTION"
+          echo "Sanitized Summary: $SUMMARY"
+          echo "Sanitized Comment: $COMMENT"
 
       - name: Create Jira Ticket for GitHub Actions
+        if: ${{ env.EVENT_TYPE == 'pull_request' || env.EVENT_TYPE == 'issues' }}
         env:
           JIRA_URL: ${{ vars.JIRA_URL }}
           JIRA_USERNAME: ${{ vars.JIRA_USERNAME }}
@@ -69,7 +87,28 @@ jobs:
           SUMMARY: ${{ env.SUMMARY }}
           DESCRIPTION: ${{ env.DESCRIPTION }}
         run: |
-          # Function to create a Jira issue
+          DESCRIPTION_ADF=$(echo "$DESCRIPTION" | jq -Rs '{
+            type: "doc",
+            version: 1,
+            content: [
+              {
+                type: "paragraph",
+                content: [
+                  { type: "text", text: . }
+                ]
+              }
+            ]
+          }')
+          # Debug: Output the JSON payload
+          echo "Jira Payload:"
+          echo '{
+            "fields": {
+              "project": { "key": "'"$JIRA_PROJECT_KEY"'" },
+              "summary": "'"$SUMMARY"'",
+              "description": '"$DESCRIPTION_ADF"',
+              "issuetype": { "name": "Task" }
+            }
+          }' | jq .
           curl -X POST \
             -u "$JIRA_USERNAME:$JIRA_API_TOKEN" \
             -H "Content-Type: application/json" \
@@ -77,23 +116,65 @@ jobs:
               "fields": {
                 "project": { "key": "'"$JIRA_PROJECT_KEY"'" },
                 "summary": "'"$SUMMARY"'",
-                "description": {
-                  "type": "doc",
-                  "version": 1,
-                  "content": [
-                    {
-                      "type": "paragraph",
-                      "content": [
-                        {
-                          "type": "text",
-                          "text": "'"$DESCRIPTION"'"
-                        }
-                      ]
-                    }
-                  ]
-                },
+                "description": '"$DESCRIPTION_ADF"',
                 "issuetype": { "name": "Task" }
               }
             }' \
             "$JIRA_URL/rest/api/3/issue/"
+
+      - name: Sync Comments with Jira
+        if: ${{ env.EVENT_TYPE == 'issue_comment' }}
+        env:
+          JIRA_URL: ${{ vars.JIRA_URL }}
+          JIRA_USERNAME: ${{ vars.JIRA_USERNAME }}
+          JIRA_API_TOKEN: ${{ vars.JIRA_API_TOKEN }}
+          COMMENT: ${{ env.COMMENT }}
+          ISSUE_NUMBER: ${{ env.ISSUE_NUMBER }}
+        run: |
+          JIRA_ISSUE_KEY=$(curl -s -u "$JIRA_USERNAME:$JIRA_API_TOKEN" "$JIRA_URL/rest/api/3/search?jql=description~\"GitHub Issue $ISSUE_NUMBER\"" | jq -r '.issues[0].key')
+          if [ -z "$JIRA_ISSUE_KEY" ]; then
+            echo "Jira issue not found for GitHub issue $ISSUE_NUMBER"
+            exit 1
+          fi
+          curl -X POST \
+            -u "$JIRA_USERNAME:$JIRA_API_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "body": {
+                "type": "doc",
+                "version": 1,
+                "content": [
+                  {
+                    "type": "paragraph",
+                    "content": [
+                      {
+                        "type": "text",
+                        "text": "'"$COMMENT"'"
+                      }
+                    ]
+                  }
+                ]
+              }
+            }' \
+            "$JIRA_URL/rest/api/3/issue/$JIRA_ISSUE_KEY/comment"
+   
+      - name: Send mail
+        if: always()
+        uses: dawidd6/action-send-mail@v2
+        with:
+      # mail server settings
+          server_address: smtp.gmail.com
+          server_port: 465
+    # user credentials
+          username: ${{ secrets.EMAIL_USERNAME }}
+          password: ${{ secrets.EMAIL_PASSWORD }}
+    # email subject
+          subject: New issue is raised for ${{ github.repository }} for job ${{ github.job }} and pipeline is ${{ job.status }}
+    # email body as text
+          body: ${{ github.job }} job in worflow ${{ github.workflow }} for ${{ github.repository }} has created new jira
+    # comma-separated string, send email to
+          to: ramyashree.saliyan@ipinfusion.com,vishal.doni@ipinfusion.com
+    # from email name
+          from: vishal.doni@ipinfusion.com
+          
 
