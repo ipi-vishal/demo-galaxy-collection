@@ -54,6 +54,11 @@ jobs:
             echo "Unsupported event type: $GITHUB_EVENT_NAME"
             exit 1
           fi
+          # Sanitize variables to handle special characters
+          DESCRIPTION=$(echo "$DESCRIPTION" | tr -d '\n' | tr -d '\r')
+          SUMMARY=$(echo "$SUMMARY" | tr -d '\n' | tr -d '\r')
+          COMMENT=$(echo "$COMMENT" | tr -d '\n' | tr -d '\r')
+
           echo "EVENT_TYPE=$EVENT_TYPE" >> $GITHUB_ENV
           echo "DESCRIPTION=$DESCRIPTION" >> $GITHUB_ENV
           echo "SUMMARY=$SUMMARY" >> $GITHUB_ENV
@@ -67,6 +72,9 @@ jobs:
           echo "Summary: $SUMMARY"
           echo "Comment: $COMMENT"
           echo "Issue Number: $ISSUE_NUMBER"
+          echo "Sanitized Description: $DESCRIPTION"
+          echo "Sanitized Summary: $SUMMARY"
+          echo "Sanitized Comment: $COMMENT"
 
       - name: Create Jira Ticket for GitHub Actions
         if: ${{ env.EVENT_TYPE == 'pull_request' || env.EVENT_TYPE == 'issues' }}
