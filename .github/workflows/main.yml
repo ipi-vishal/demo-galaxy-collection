@@ -87,13 +87,18 @@ jobs:
           SUMMARY: ${{ env.SUMMARY }}
           DESCRIPTION: ${{ env.DESCRIPTION }}
         run: |
-        # Escape and format DESCRIPTION for Atlassian Document Format (ADF)
-          DESCRIPTION_ADF=$(echo "$DESCRIPTION" | jq -Rs '{ 
-            type: "doc", 
-            version: 1, 
-            content: [ 
-              { type: "paragraph", content: [ { type: "text", text: . } ] } 
-            ] 
+          # Escape and format DESCRIPTION for Atlassian Document Format (ADF)
+          DESCRIPTION_ADF=$(echo "$DESCRIPTION" | jq -Rs '{
+            type: "doc",
+            version: 1,
+            content: [
+              {
+                type: "paragraph",
+                content: [
+                  { type: "text", text: . }
+                ]
+              }
+            ]
           }')
           curl -X POST \
             -u "$JIRA_USERNAME:$JIRA_API_TOKEN" \
