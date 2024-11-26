@@ -1,3 +1,5 @@
+name: Sync GitHub Comments to Jira
+
 on:
   issue_comment:
     types:
@@ -7,51 +9,79 @@ on:
 jobs:
   sync-comment:
     runs-on: ubuntu-latest
-    env:
-      JIRA_URL: ${{ secrets.JIRA_URL }}
-      JIRA_USERNAME: ${{ secrets.JIRA_USERNAME }}
-      JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
-      JIRA_PROJECT_KEY: ${{ vars.JIRA_PROJECT_KEY }}
-
     steps:
-      # Debug Variables
-      - name: Debug Variables
+      # Debug GitHub Event Details
+      - name: Debug GitHub Event
         run: |
           echo "Event Name: ${{ github.event_name }}"
           echo "Event Action: ${{ github.event.action }}"
-          echo "JIRA_PROJECT_KEY: ${{ vars.JIRA_PROJECT_KEY }}"
-          echo "JIRA_URL: $JIRA_URL"
-          echo "JIRA_USERNAME: $JIRA_USERNAME"
+          echo "Issue Title: ${{ github.event.issue.title }}"
+          echo "Comment Body: ${{ github.event.comment.body }}"
+          echo "Repository: ${{ github.repository }}"
+          echo "Actor: ${{ github.actor }}"
+        env:
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+          COMMENT_BODY: ${{ github.event.comment.body }}
 
       # Extract Issue Details
-      - name: Extract GitHub Issue Details
+      - name: Set Issue Details as Environment Variables
         run: |
+          echo "Setting ISSUE_TITLE and COMMENT_BODY to environment..."
           echo "ISSUE_TITLE=${{ github.event.issue.title }}" >> $GITHUB_ENV
           echo "COMMENT_BODY=${{ github.event.comment.body }}" >> $GITHUB_ENV
 
       # Find Associated Jira Issue by Title
-      - name: Find Associated Jira Issue by Title
+      - name: Find Jira Issue by Title
+        id: find_jira
         env:
+          JIRA_URL: ${{ secrets.JIRA_URL }}
+          JIRA_USERNAME: ${{ secrets.JIRA_USERNAME }}
+          JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
           ISSUE_TITLE: ${{ env.ISSUE_TITLE }}
+          JIRA_PROJECT_KEY: ${{ vars.JIRA_PROJECT_KEY }}
         run: |
-          echo "Issue TITLE: $ISSUE_TITLE"
+          # Debug Variables
+          echo "Debugging Environment Variables:"
+          echo "ISSUE_TITLE: $ISSUE_TITLE"
+          echo "JIRA_URL: $JIRA_URL"
+          echo "JIRA_USERNAME: $JIRA_USERNAME"
+          echo "JIRA_API_TOKEN: [REDACTED]"
+          echo "JIRA_PROJECT_KEY: $JIRA_PROJECT_KEY"
+
+          # Escape ISSUE_TITLE
           ESCAPED_TITLE=$(echo "$ISSUE_TITLE" | sed 's/"/\\"/g')
-          echo "ESCAPED_TITLE is: $ESCAPED_TITLE"
-          
+          echo "Escaped ISSUE_TITLE: $ESCAPED_TITLE"
+
+          # Search Jira issue by title
           RESPONSE=$(curl -s -u "$JIRA_USERNAME:$JIRA_API_TOKEN" \
             "$JIRA_URL/rest/api/3/search?jql=project=$JIRA_PROJECT_KEY+AND+summary~\"$ESCAPED_TITLE\"")
           
           echo "Jira Search Response: $RESPONSE"
+
+          # Extract Jira Issue Key
           JIRA_ISSUE_KEY=$(echo "$RESPONSE" | jq -r '.issues[0].key')
+
+          # Validate JIRA_ISSUE_KEY
+          if [ -z "$JIRA_ISSUE_KEY" ] || [ "$JIRA_ISSUE_KEY" == "null" ]; then
+            echo "Jira issue not found for GitHub issue title: $ISSUE_TITLE"
+            exit 0
+          fi
+
+          echo "Found Jira Issue Key: $JIRA_ISSUE_KEY"
           echo "JIRA_ISSUE_KEY=$JIRA_ISSUE_KEY" >> $GITHUB_ENV
 
       # Add Comment to Jira
-      - name: Add Comment to Jira
+      - name: Add Comment to Jira Issue
+        if: success() && env.JIRA_ISSUE_KEY != ''
         env:
+          JIRA_URL: ${{ secrets.JIRA_URL }}
+          JIRA_USERNAME: ${{ secrets.JIRA_USERNAME }}
+          JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
           JIRA_ISSUE_KEY: ${{ env.JIRA_ISSUE_KEY }}
           COMMENT_BODY: ${{ env.COMMENT_BODY }}
         run: |
-          curl -X POST \
+          echo "Adding comment to Jira Issue Key: $JIRA_ISSUE_KEY"
+          RESPONSE=$(curl -X POST \
             -u "$JIRA_USERNAME:$JIRA_API_TOKEN" \
             -H "Content-Type: application/json" \
             -d '{
@@ -71,6 +101,9 @@ jobs:
                 ]
               }
             }' \
-            "$JIRA_URL/rest/api/3/issue/$JIRA_ISSUE_KEY/comment"
+            "$JIRA_URL/rest/api/3/issue/$JIRA_ISSUE_KEY/comment")
+
+          echo "Jira Comment Response: $RESPONSE"
+
 
 
