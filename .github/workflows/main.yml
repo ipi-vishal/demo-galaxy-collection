@@ -23,6 +23,7 @@ jobs:
       - name: Use variables
         run: |
           echo "Event Name: $GITHUB_EVENT_NAME"
+          echo "event"
           echo "Event Action: $GITHUB_EVENT_ACTION"
         env:
           GITHUB_EVENT_NAME: ${{ github.event_name }}
