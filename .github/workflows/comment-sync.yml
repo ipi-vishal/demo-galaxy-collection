@@ -37,18 +37,23 @@ jobs:
           ISSUE_TITLE: ${{ env.ISSUE_TITLE }}
           JIRA_PROJECT_KEY: ${{ vars.JIRA_PROJECT_KEY }}
         run: |
-          # Escape special characters in title
+          
+          echo "Issue TITLE: $ISSUE_TITLE"
+          echo "JIRA_USERNAME: $JIRA_USERNAME"
+          echo "JIRA_API_TOKEN: $JIRA_API_TOKEN"
+          echo "JIRA_PROJECT_KEY": $JIRA_PROJECT_KEY"
           ESCAPED_TITLE=$(echo "$ISSUE_TITLE" | sed 's/"/\\"/g')
+          echo "ESCAPED_TITLE is: $ESCAPED_TITLE"
 
           # Search Jira issue by title
           RESPONSE=$(curl -s -u "$JIRA_USERNAME:$JIRA_API_TOKEN" \
             "$JIRA_URL/rest/api/3/search?jql=project=$JIRA_PROJECT_KEY+AND+summary~\"$ESCAPED_TITLE\"")
-
+          
           echo "Jira Search Response: $RESPONSE"
 
           # Extract Jira Issue Key
           JIRA_ISSUE_KEY=$(echo "$RESPONSE" | jq -r '.issues[0].key')
-
+          echo $JIRA_ISSUE_KEY
           if [ -z "$JIRA_ISSUE_KEY" ] || [ "$JIRA_ISSUE_KEY" == "null" ]; then
             echo "Jira issue not found for GitHub issue title: $ISSUE_TITLE"
             exit 0
