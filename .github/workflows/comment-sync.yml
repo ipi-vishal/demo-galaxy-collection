@@ -41,7 +41,7 @@ jobs:
           echo "Issue TITLE: $ISSUE_TITLE"
           echo "JIRA_USERNAME: $JIRA_USERNAME"
           echo "JIRA_API_TOKEN: $JIRA_API_TOKEN"
-          echo "JIRA_PROJECT_KEY": $JIRA_PROJECT_KEY"
+          echo "JIRA_PROJECT_KEY: $JIRA_PROJECT_KEY"
           ESCAPED_TITLE=$(echo "$ISSUE_TITLE" | sed 's/"/\\"/g')
           echo "ESCAPED_TITLE is: $ESCAPED_TITLE"
 
