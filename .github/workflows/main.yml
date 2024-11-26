@@ -122,41 +122,38 @@ jobs:
             }' \
             "$JIRA_URL/rest/api/3/issue/"
 
-      - name: Sync Comments with Jira
-        if: ${{ env.EVENT_TYPE == 'issue_comment' }}
+      - name: Extract GitHub Issue Details
+        id: extract_details
         env:
-          JIRA_URL: ${{ vars.JIRA_URL }}
-          JIRA_USERNAME: ${{ vars.JIRA_USERNAME }}
-          JIRA_API_TOKEN: ${{ vars.JIRA_API_TOKEN }}
-          COMMENT: ${{ env.COMMENT }}
-          ISSUE_NUMBER: ${{ env.ISSUE_NUMBER }}
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+          COMMENT_BODY: ${{ github.event.comment.body }}
         run: |
-          JIRA_ISSUE_KEY=$(curl -s -u "$JIRA_USERNAME:$JIRA_API_TOKEN" "$JIRA_URL/rest/api/3/search?jql=description~\"GitHub Issue $ISSUE_NUMBER\"" | jq -r '.issues[0].key')
-          if [ -z "$JIRA_ISSUE_KEY" ]; then
-            echo "Jira issue not found for GitHub issue $ISSUE_NUMBER"
+          echo "ISSUE_TITLE=$ISSUE_TITLE" >> $GITHUB_ENV
+          echo "COMMENT_BODY=$COMMENT_BODY" >> $GITHUB_ENV
+
+      - name: Find Associated Jira Issue by Title
+        id: find_jira
+        env:
+          JIRA_URL: ${{ secrets.JIRA_URL }}
+          JIRA_USERNAME: ${{ secrets.JIRA_USERNAME }}
+          JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+          ISSUE_TITLE: ${{ env.ISSUE_TITLE }}
+          JIRA_PROJECT_KEY: ${{ env.JIRA_PROJECT_KEY }}
+        run: |
+          # Replace spaces with '+' for URL encoding
+          ENCODED_TITLE=$(echo "$ISSUE_TITLE" | sed 's/ /+/g')
+
+          # Search for the Jira issue by title
+          JIRA_ISSUE_KEY=$(curl -s -u "$JIRA_USERNAME:$JIRA_API_TOKEN" \
+            "$JIRA_URL/rest/api/3/search?jql=project=$JIRA_PROJECT_KEY+AND+summary~\"$ENCODED_TITLE\"" \
+            | jq -r '.issues[0].key')
+
+          if [ -z "$JIRA_ISSUE_KEY" ] || [ "$JIRA_ISSUE_KEY" == "null" ]; then
+            echo "Jira issue not found for GitHub issue title: $ISSUE_TITLE"
             exit 1
           fi
-          curl -X POST \
-            -u "$JIRA_USERNAME:$JIRA_API_TOKEN" \
-            -H "Content-Type: application/json" \
-            -d '{
-              "body": {
-                "type": "doc",
-                "version": 1,
-                "content": [
-                  {
-                    "type": "paragraph",
-                    "content": [
-                      {
-                        "type": "text",
-                        "text": "'"$COMMENT"'"
-                      }
-                    ]
-                  }
-                ]
-              }
-            }' \
-            "$JIRA_URL/rest/api/3/issue/$JIRA_ISSUE_KEY/comment"
+
+          echo "JIRA_ISSUE_KEY=$JIRA_ISSUE_KEY" >> $GITHUB_ENV
    
       - name: Send mail
         if: always()
