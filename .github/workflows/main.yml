@@ -138,7 +138,7 @@ jobs:
           JIRA_USERNAME: ${{ secrets.JIRA_USERNAME }}
           JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
           ISSUE_TITLE: ${{ env.ISSUE_TITLE }}
-          JIRA_PROJECT_KEY: ${{ env.JIRA_PROJECT_KEY }}
+          JIRA_PROJECT_KEY: ${{ vars.JIRA_PROJECT_KEY }}
         run: |
           # Replace spaces with '+' for URL encoding
           ENCODED_TITLE=$(echo "$ISSUE_TITLE" | sed 's/ /+/g')
