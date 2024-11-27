@@ -55,13 +55,12 @@ jobs:
           # Search Jira issue by title
           RESPONSE=$(curl -s -u "$JIRA_USERNAME:$JIRA_API_TOKEN" \
             "$JIRA_URL/rest/api/3/search?jql=project=$JIRA_PROJECT_KEY+AND+summary~\"$ESCAPED_TITLE\"")
-          
+          RESPONSE=$(curl -s -v -u "$JIRA_USERNAME:$JIRA_API_TOKEN" --get --data-urlencode "jql=project=$JIRA_PROJECT_KEY AND summary~\"$ESCAPED_TITLE\"" $JIRA_URL/rest/api/3/search)  
           echo "Jira Search Response: $RESPONSE"
 
           # Extract Jira Issue Key
-          JIRA_ISSUE_KEY=$(echo "$RESPONSE" | jq -r '.issues[0].key')
-
-          # Validate JIRA_ISSUE_KEY
+         JIRA_ISSUE_KEY=$(echo "$RESPONSE" | jq -r '.issues[] | .key') 
+            # Validate JIRA_ISSUE_KEY
           if [ -z "$JIRA_ISSUE_KEY" ] || [ "$JIRA_ISSUE_KEY" == "null" ]; then
             echo "Jira issue not found for GitHub issue title: $ISSUE_TITLE"
             exit 0
