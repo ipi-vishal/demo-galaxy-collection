@@ -57,7 +57,7 @@ jobs:
           echo "Jira Search Response: $RESPONSE"
 
           # Extract Jira Issue Key
-         JIRA_ISSUE_KEY=$(echo "$RESPONSE" | jq -r '.issues[] | .key') 
+          JIRA_ISSUE_KEY=$(echo "$RESPONSE" | jq -r '.issues[] | .key') 
             # Validate JIRA_ISSUE_KEY
           if [ -z "$JIRA_ISSUE_KEY" ] || [ "$JIRA_ISSUE_KEY" == "null" ]; then
             echo "Jira issue not found for GitHub issue title: $ISSUE_TITLE"
