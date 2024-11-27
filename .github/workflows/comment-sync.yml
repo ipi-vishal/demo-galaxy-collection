@@ -53,8 +53,6 @@ jobs:
           echo "Escaped ISSUE_TITLE: $ESCAPED_TITLE"
 
           # Search Jira issue by title
-          RESPONSE=$(curl -s -u "$JIRA_USERNAME:$JIRA_API_TOKEN" \
-            "$JIRA_URL/rest/api/3/search?jql=project=$JIRA_PROJECT_KEY+AND+summary~\"$ESCAPED_TITLE\"")
           RESPONSE=$(curl -s -v -u "$JIRA_USERNAME:$JIRA_API_TOKEN" --get --data-urlencode "jql=project=$JIRA_PROJECT_KEY AND summary~\"$ESCAPED_TITLE\"" $JIRA_URL/rest/api/3/search)  
           echo "Jira Search Response: $RESPONSE"
 
