@@ -96,7 +96,7 @@ jobs:
                     "content": [
                       {
                         "type": "text",
-                        "text": "'"\"$COMMENT_BODY\""'"
+                        "text": "'"$COMMENT_BODY"'"
                       }
                     ]
                   }
