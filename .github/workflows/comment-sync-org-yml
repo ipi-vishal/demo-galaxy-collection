@@ -83,11 +83,6 @@ jobs:
           echo "ISSUE_TITLE=${{ github.event.issue.title }}" >> $GITHUB_ENV
           echo "COMMENT_BODY=${{ github.event.comment.body }}" >> $GITHUB_ENV
           echo "Adding comment to Jira Issue Key: $JIRA_ISSUE_KEY"
-          export JIRA_USERNAME=$JIRA_USERNAME
-          export JIRA_API_TOKEN=$JIRA_API_TOKEN
-          export JIRA_ISSUE_KEY=$JIRA_ISSUE_KEY
-          export COMMENT_BODY="$COMMENT_BODY"
-          export JIRA_URL=$JIRA_URL
           RESPONSE=$(curl -X POST \
             -u "$JIRA_USERNAME:$JIRA_API_TOKEN" \
             -H "Content-Type: application/json" \
