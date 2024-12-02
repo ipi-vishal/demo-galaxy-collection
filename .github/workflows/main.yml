@@ -154,6 +154,13 @@ jobs:
       - name: Send mail
         if: always()
         uses: dawidd6/action-send-mail@v2
+        env:
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
+          GITHUB_EVENT_ACTION: ${{ github.event.action }}
+          JIRA_PROJECT_KEY: ${{ vars.JIRA_PROJECT_KEY }}
+          JIRA_USERNAME: ${{ vars.JIRA_USERNAME }}
+          JIRA_URL: ${{ vars.JIRA_URL }}
+          JIRA_ISSUE_KEY: ${{ env.JIRA_ISSUE_KEY }}
         with:
       # mail server settings
           server_address: smtp.gmail.com
@@ -162,7 +169,7 @@ jobs:
           username: ${{ secrets.EMAIL_USERNAME }}
           password: ${{ secrets.EMAIL_PASSWORD }}
     # email subject
-          subject: A new ${{ github.event.action }} is created for ${{ github.repository }} for job ${{ github.job }} and pipeline is ${{ job.status }}
+          subject: A new $GITHUB_EVENT_NAME is created for ${{ github.repository }} for job ${{ github.job }} and pipeline is ${{ job.status }}
     # email body as text
     #body: ${{ github.job }} job in worflow ${{ github.workflow }} for ${{ github.repository }} has created new jira
           body: |
@@ -181,5 +188,5 @@ jobs:
           to: ${{ secrets.EMAIL_TO }}
     # from email name
           from: ${{ secrets.EMAIL_USERNAME }}
-          
+          content_type: text/html 
 
