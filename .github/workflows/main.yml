@@ -71,6 +71,28 @@ jobs:
           echo "Sanitized Description: $DESCRIPTION"
           echo "Sanitized Summary: $SUMMARY"
           echo "Sanitized Comment: $COMMENT"
+          # fetch the jira details
+          function jira_issue_data () {
+            # Escape ISSUE_TITLE
+          ESCAPED_TITLE=$(echo "$ISSUE_TITLE" | sed 's/"/\\"/g')
+          echo "Escaped ISSUE_TITLE: $ESCAPED_TITLE"
+
+          # Search Jira issue by title
+          #RESPONSE=$(curl -s -v -u "$JIRA_USERNAME:$JIRA_API_TOKEN" --get --data-urlencode "jql=project=$JIRA_PROJECT_KEY AND summary~\"$ESCAPED_TITLE\"" $JIRA_URL/rest/api/3/search)
+            RESPONSE=$(curl -v -u "$JIRA_USERNAME:$JIRA_API_TOKEN" --get --data-urlencode "jql=project=$JIRA_PROJECT_KEY AND summary~\"$ESCAPED_TILE\"" $JIRA_URL/rest/api/3/search)
+          echo "Jira Search Response: $RESPONSE"
+
+          # Extract Jira Issue Key
+          JIRA_ISSUE_KEY=$(echo "$RESPONSE" | jq -r '.issues[] | .key')
+            # Validate JIRA_ISSUE_KEY
+          if [ -z "$JIRA_ISSUE_KEY" ] || [ "$JIRA_ISSUE_KEY" == "null" ]; then
+            echo "Jira issue not found for GitHub issue title: $ISSUE_TITLE"
+            exit 0
+          fi
+
+          echo "Found Jira Issue Key: $JIRA_ISSUE_KEY"
+          echo "JIRA_ISSUE_KEY=$JIRA_ISSUE_KEY" >> $GITHUB_ENV
+          }
 
       - name: Create Jira Ticket for GitHub Actions
         if: ${{ env.EVENT_TYPE == 'pull_request' || env.EVENT_TYPE == 'issues' }}
@@ -127,30 +149,26 @@ jobs:
           echo "ISSUE_TITLE=$ISSUE_TITLE" >> $GITHUB_ENV
           echo "COMMENT_BODY=$COMMENT_BODY" >> $GITHUB_ENV
 
-      - name: Find Associated Jira Issue by Title
+      - name: Find Jira Issue by Title
         id: find_jira
         env:
-          JIRA_URL: ${{ secrets.JIRA_URL }}
-          JIRA_USERNAME: ${{ secrets.JIRA_USERNAME }}
-          JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+          JIRA_URL: ${{ vars.JIRA_URL }}
+          JIRA_USERNAME: ${{ vars.JIRA_USERNAME }}
+          JIRA_API_TOKEN: ${{ vars.JIRA_API_TOKEN }}
           ISSUE_TITLE: ${{ env.ISSUE_TITLE }}
           JIRA_PROJECT_KEY: ${{ vars.JIRA_PROJECT_KEY }}
         run: |
-          # Replace spaces with '+' for URL encoding
-          ENCODED_TITLE=$(echo "$ISSUE_TITLE" | sed 's/ /+/g')
+          echo "ISSUE_TITLE=${{ github.event.issue.title }}" >> $GITHUB_ENV
+          echo "COMMENT_BODY=${{ github.event.comment.body }}" >> $GITHUB_ENV
+          # Debug Variables
+          echo "Debugging Environment Variables:"
+          echo "ISSUE_TITLE: $ISSUE_TITLE"
+          echo "JIRA_URL: $JIRA_URL"
+          echo "JIRA_USERNAME: $JIRA_USERNAME"
+          echo "JIRA_API_TOKEN: $JIRA_API_TOKEN"
+          echo "JIRA_PROJECT_KEY: $JIRA_PROJECT_KEY"
+          jira_issue_data
 
-          # Search for the Jira issue by title
-          JIRA_ISSUE_KEY=$(curl -s -u "$JIRA_USERNAME:$JIRA_API_TOKEN" \
-            "$JIRA_URL/rest/api/3/search?jql=project=$JIRA_PROJECT_KEY+AND+summary~\"$ENCODED_TITLE\"" \
-            | jq -r '.issues[0].key')
-
-          if [ -z "$JIRA_ISSUE_KEY" ] || [ "$JIRA_ISSUE_KEY" == "null" ]; then
-            echo "Jira issue not found for GitHub issue title: $ISSUE_TITLE"
-            exit 0
-          fi
-
-          echo "JIRA_ISSUE_KEY=$JIRA_ISSUE_KEY" >> $GITHUB_ENV
-   
       - name: Send mail
         if: always()
         uses: dawidd6/action-send-mail@v2
@@ -169,7 +187,7 @@ jobs:
           username: ${{ secrets.EMAIL_USERNAME }}
           password: ${{ secrets.EMAIL_PASSWORD }}
     # email subject
-          subject: A new $GITHUB_EVENT_NAME is created for ${{ github.repository }} for job ${{ github.job }} and pipeline is ${{ job.status }}
+          subject: A new ${{ github.event_name }} is created for ${{ github.repository }} for job ${{ github.job }} and pipeline is ${{ job.status }}
     # email body as text
     #body: ${{ github.job }} job in worflow ${{ github.workflow }} for ${{ github.repository }} has created new jira
           body: |
@@ -182,6 +200,12 @@ jobs:
                <p><strong>Summary:</strong> ${{ env.SUMMARY }}</p>
                <p><strong>Description:</strong> ${{ env.DESCRIPTION }}</p>
                <p><strong>Issue Number:</strong> ${{ env.ISSUE_NUMBER }}</p>
+               <p>
+                <strong>JIRA Issue Link:</strong>
+                <a href="${{ vars.JIRA_URL }}/browse/${{ vars.JIRA_PROJECT_KEY }}-${{ env.JIRA_ISSUE_KEY }}">
+                   JIRA-${{ vars.JIRA_PROJECT_KEY }}-<TICKET_ID>
+                </a>
+               </p>
             </body>
            </html>
     # comma-separated string, send email to
