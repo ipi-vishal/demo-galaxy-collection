@@ -10,6 +10,10 @@ on:
     types:
       - opened
       - edited
+  issue_comment:
+    types:
+      - created
+      - edited
 
 jobs:
   create_jira_ticket_github_prs:
@@ -71,31 +75,6 @@ jobs:
           echo "Sanitized Description: $DESCRIPTION"
           echo "Sanitized Summary: $SUMMARY"
           echo "Sanitized Comment: $COMMENT"
-          # Function to fetch the jira details
-          echo  'jira_issue_data () {
-          local ISSUE_TITLE="$1"
-            # Escape ISSUE_TITLE
-          ESCAPED_TITLE=$(echo "$ISSUE_TITLE" | sed 's/"/\\"/g')
-          echo "Escaped ISSUE_TITLE: $ESCAPED_TITLE"
-
-          # Search Jira issue by title
-          #RESPONSE=$(curl -s -v -u "$JIRA_USERNAME:$JIRA_API_TOKEN" --get --data-urlencode "jql=project=$JIRA_PROJECT_KEY AND summary~\"$ESCAPED_TITLE\"" $JIRA_URL/rest/api/3/search)
-          RESPONSE=$(curl -v -u "$JIRA_USERNAME:$JIRA_API_TOKEN" --get --data-urlencode "jql=project=$JIRA_PROJECT_KEY AND summary~\"$ESCAPED_TILE\"" $JIRA_URL/rest/api/3/search)
-          echo "Jira Search Response: $RESPONSE"
-
-          # Extract Jira Issue Key
-          JIRA_ISSUE_KEY=$(echo "$RESPONSE" | jq -r '.issues[] | .key')
-            # Validate JIRA_ISSUE_KEY
-          if [ -z "$JIRA_ISSUE_KEY" ] || [ "$JIRA_ISSUE_KEY" == "null" ]; then
-            echo "Jira issue not found for GitHub issue title: $ISSUE_TITLE"
-            exit 0
-          fi
-
-          echo "Found Jira Issue Key: $JIRA_ISSUE_KEY"
-          echo "JIRA_ISSUE_KEY=$JIRA_ISSUE_KEY" >> $GITHUB_ENV
-          }' > ./jira_function.sh
-
-          chmod +x jira_function.sh
 
       - name: Create Jira Ticket for GitHub Actions
         if: ${{ env.EVENT_TYPE == 'pull_request' || env.EVENT_TYPE == 'issues' }}
@@ -152,42 +131,33 @@ jobs:
           echo "ISSUE_TITLE=$ISSUE_TITLE" >> $GITHUB_ENV
           echo "COMMENT_BODY=$COMMENT_BODY" >> $GITHUB_ENV
 
-      - name: Find Jira Issue by Title
+      - name: Find Associated Jira Issue by Title
         id: find_jira
         env:
-          JIRA_URL: ${{ vars.JIRA_URL }}
-          JIRA_USERNAME: ${{ vars.JIRA_USERNAME }}
-          JIRA_API_TOKEN: ${{ vars.JIRA_API_TOKEN }}
+          JIRA_URL: ${{ secrets.JIRA_URL }}
+          JIRA_USERNAME: ${{ secrets.JIRA_USERNAME }}
+          JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
           ISSUE_TITLE: ${{ env.ISSUE_TITLE }}
           JIRA_PROJECT_KEY: ${{ vars.JIRA_PROJECT_KEY }}
         run: |
-          echo "ISSUE_TITLE=${{ github.event.issue.title }}" >> $GITHUB_ENV
-          echo "COMMENT_BODY=${{ github.event.comment.body }}" >> $GITHUB_ENV
-          # Debug Variables
-          echo "Debugging Environment Variables:"
-          echo "ISSUE_TITLE: $ISSUE_TITLE"
-          echo "JIRA_URL: $JIRA_URL"
-          echo "JIRA_USERNAME: $JIRA_USERNAME"
-          echo "JIRA_API_TOKEN: $JIRA_API_TOKEN"
-          echo "JIRA_PROJECT_KEY: $JIRA_PROJECT_KEY"
-          source jira_function.sh 
-          # Debug Environment Variables
-          echo "ISSUE_TITLE=${{ github.event.issue.title }}"
-          echo "Calling jira_issue_data with ISSUE_TITLE"
+          # Replace spaces with '+' for URL encoding
+          ENCODED_TITLE=$(echo "$ISSUE_TITLE" | sed 's/ /+/g')
 
-          # Call the function
-          jira_issue_data "${{ github.event.issue.title }}"
+          # Search for the Jira issue by title
+          JIRA_ISSUE_KEY=$(curl -s -u "$JIRA_USERNAME:$JIRA_API_TOKEN" \
+            "$JIRA_URL/rest/api/3/search?jql=project=$JIRA_PROJECT_KEY+AND+summary~\"$ENCODED_TITLE\"" \
+            | jq -r '.issues[0].key')
 
+          if [ -z "$JIRA_ISSUE_KEY" ] || [ "$JIRA_ISSUE_KEY" == "null" ]; then
+            echo "Jira issue not found for GitHub issue title: $ISSUE_TITLE"
+            exit 0
+          fi
+
+          echo "JIRA_ISSUE_KEY=$JIRA_ISSUE_KEY" >> $GITHUB_ENV
+   
       - name: Send mail
         if: always()
         uses: dawidd6/action-send-mail@v2
-        env:
-          GITHUB_EVENT_NAME: ${{ github.event_name }}
-          GITHUB_EVENT_ACTION: ${{ github.event.action }}
-          JIRA_PROJECT_KEY: ${{ vars.JIRA_PROJECT_KEY }}
-          JIRA_USERNAME: ${{ vars.JIRA_USERNAME }}
-          JIRA_URL: ${{ vars.JIRA_URL }}
-          JIRA_ISSUE_KEY: ${{ env.JIRA_ISSUE_KEY }}
         with:
       # mail server settings
           server_address: smtp.gmail.com
@@ -196,30 +166,12 @@ jobs:
           username: ${{ secrets.EMAIL_USERNAME }}
           password: ${{ secrets.EMAIL_PASSWORD }}
     # email subject
-          subject: A new ${{ github.event_name }} is created for ${{ github.repository }} for job ${{ github.job }} and pipeline is ${{ job.status }}
+          subject: New issue is raised for ${{ github.repository }} for job ${{ github.job }} and pipeline is ${{ job.status }}
     # email body as text
-    #body: ${{ github.job }} job in worflow ${{ github.workflow }} for ${{ github.repository }} has created new jira
-          body: |
-           <html>
-            <body>
-               <h2>GitHub Event Notification</h2>
-               <p><strong>Event Type:</strong> ${{ env.EVENT_TYPE }}</p>
-               <p><strong>Action:</strong> ${{ github.event.action }}</p>
-               <p><strong>Repository:</strong> ${{ github.repository }}</p>
-               <p><strong>Summary:</strong> ${{ env.SUMMARY }}</p>
-               <p><strong>Description:</strong> ${{ env.DESCRIPTION }}</p>
-               <p><strong>Issue Number:</strong> ${{ env.ISSUE_NUMBER }}</p>
-               <p>
-                <strong>JIRA Issue Link:</strong>
-                <a href="${{ vars.JIRA_URL }}/browse/${{ vars.JIRA_PROJECT_KEY }}-${{ env.JIRA_ISSUE_KEY }}">
-                   JIRA-${{ vars.JIRA_PROJECT_KEY }}-<TICKET_ID>
-                </a>
-               </p>
-            </body>
-           </html>
+          body: ${{ github.job }} job in worflow ${{ github.workflow }} for ${{ github.repository }} has created new jira
     # comma-separated string, send email to
-          to: ${{ secrets.EMAIL_TO }}
+          to: ramyashree.saliyan@ipinfusion.com,vishal.doni@ipinfusion.com
     # from email name
-          from: ${{ secrets.EMAIL_USERNAME }}
-          content_type: text/html 
+          from: vishal.doni@ipinfusion.com
+          
 
