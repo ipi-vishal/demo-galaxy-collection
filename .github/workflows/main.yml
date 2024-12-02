@@ -71,15 +71,16 @@ jobs:
           echo "Sanitized Description: $DESCRIPTION"
           echo "Sanitized Summary: $SUMMARY"
           echo "Sanitized Comment: $COMMENT"
-          # fetch the jira details
-          function jira_issue_data () {
+          # Function to fetch the jira details
+          echo  'jira_issue_data () {
+          local ISSUE_TITLE="$1"
             # Escape ISSUE_TITLE
           ESCAPED_TITLE=$(echo "$ISSUE_TITLE" | sed 's/"/\\"/g')
           echo "Escaped ISSUE_TITLE: $ESCAPED_TITLE"
 
           # Search Jira issue by title
           #RESPONSE=$(curl -s -v -u "$JIRA_USERNAME:$JIRA_API_TOKEN" --get --data-urlencode "jql=project=$JIRA_PROJECT_KEY AND summary~\"$ESCAPED_TITLE\"" $JIRA_URL/rest/api/3/search)
-            RESPONSE=$(curl -v -u "$JIRA_USERNAME:$JIRA_API_TOKEN" --get --data-urlencode "jql=project=$JIRA_PROJECT_KEY AND summary~\"$ESCAPED_TILE\"" $JIRA_URL/rest/api/3/search)
+          RESPONSE=$(curl -v -u "$JIRA_USERNAME:$JIRA_API_TOKEN" --get --data-urlencode "jql=project=$JIRA_PROJECT_KEY AND summary~\"$ESCAPED_TILE\"" $JIRA_URL/rest/api/3/search)
           echo "Jira Search Response: $RESPONSE"
 
           # Extract Jira Issue Key
@@ -92,7 +93,9 @@ jobs:
 
           echo "Found Jira Issue Key: $JIRA_ISSUE_KEY"
           echo "JIRA_ISSUE_KEY=$JIRA_ISSUE_KEY" >> $GITHUB_ENV
-          }
+          }' > ./jira_function.sh
+
+          chmod +x jira_function.sh
 
       - name: Create Jira Ticket for GitHub Actions
         if: ${{ env.EVENT_TYPE == 'pull_request' || env.EVENT_TYPE == 'issues' }}
@@ -167,7 +170,13 @@ jobs:
           echo "JIRA_USERNAME: $JIRA_USERNAME"
           echo "JIRA_API_TOKEN: $JIRA_API_TOKEN"
           echo "JIRA_PROJECT_KEY: $JIRA_PROJECT_KEY"
-          jira_issue_data
+          source jira_function.sh 
+          # Debug Environment Variables
+          echo "ISSUE_TITLE=${{ github.event.issue.title }}"
+          echo "Calling jira_issue_data with ISSUE_TITLE"
+
+          # Call the function
+          jira_issue_data "${{ github.event.issue.title }}"
 
       - name: Send mail
         if: always()
