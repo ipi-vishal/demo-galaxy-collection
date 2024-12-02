@@ -10,6 +10,10 @@ on:
     types:
       - opened
       - edited
+  issue_comment:
+    types:
+      - created
+      - edited
 
 jobs:
   create_jira_ticket_github_prs:
@@ -162,24 +166,12 @@ jobs:
           username: ${{ secrets.EMAIL_USERNAME }}
           password: ${{ secrets.EMAIL_PASSWORD }}
     # email subject
-          subject: A new ${{ github.event.action }} is created for ${{ github.repository }} for job ${{ github.job }} and pipeline is ${{ job.status }}
+          subject: New issue is raised for ${{ github.repository }} for job ${{ github.job }} and pipeline is ${{ job.status }}
     # email body as text
-    #body: ${{ github.job }} job in worflow ${{ github.workflow }} for ${{ github.repository }} has created new jira
-          body: |
-           <html>
-            <body>
-               <h2>GitHub Event Notification</h2>
-               <p><strong>Event Type:</strong> ${{ env.EVENT_TYPE }}</p>
-               <p><strong>Action:</strong> ${{ github.event.action }}</p>
-               <p><strong>Repository:</strong> ${{ github.repository }}</p>
-               <p><strong>Summary:</strong> ${{ env.SUMMARY }}</p>
-               <p><strong>Description:</strong> ${{ env.DESCRIPTION }}</p>
-               <p><strong>Issue Number:</strong> ${{ env.ISSUE_NUMBER }}</p>
-            </body>
-           </html>
+          body: ${{ github.job }} job in worflow ${{ github.workflow }} for ${{ github.repository }} has created new jira
     # comma-separated string, send email to
-          to: ${{ secrets.EMAIL_TO }}
+          to: ramyashree.saliyan@ipinfusion.com,vishal.doni@ipinfusion.com
     # from email name
-          from: ${{ secrets.EMAIL_USERNAME }}
+          from: vishal.doni@ipinfusion.com
           
 
