@@ -56,7 +56,7 @@ jobs:
 
           # Search Jira issue by title
           #RESPONSE=$(curl -s -v -u "$JIRA_USERNAME:$JIRA_API_TOKEN" --get --data-urlencode "jql=project=$JIRA_PROJECT_KEY AND summary~\"$ESCAPED_TITLE\"" $JIRA_URL/rest/api/3/search)  
-          RESPONSE=$(curl -v -u "$JIRA_USERNAME:$JIRA_API_TOKEN" --get --data-urlencode "jql=project=$JIRA_PROJECT_KEY AND summary~\"$ESCAPED_TITLE\"" $JIRA_URL/rest/api/3/search)
+          RESPONSE=$(curl -s -u "$JIRA_USERNAME:$JIRA_API_TOKEN" --get --data-urlencode "jql=project=$JIRA_PROJECT_KEY AND summary~\"$ESCAPED_TITLE\"" $JIRA_URL/rest/api/3/search)
           echo "Jira Search Response: $RESPONSE"
 
           # Extract Jira Issue Key
@@ -88,7 +88,7 @@ jobs:
           export JIRA_ISSUE_KEY=$JIRA_ISSUE_KEY
           export COMMENT_BODY="$COMMENT_BODY"
           export JIRA_URL=$JIRA_URL
-          RESPONSE=$(curl -X POST \
+          RESPONSE=$(curl -s -X POST \
             -u "$JIRA_USERNAME:$JIRA_API_TOKEN" \
             -H "Content-Type: application/json" \
             -d '{
@@ -113,4 +113,43 @@ jobs:
           echo "Jira Comment Response: $RESPONSE"
 
 
-
+      - name: Email Notification
+        if: always()
+        uses: dawidd6/action-send-mail@v2
+        env:
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
+          GITHUB_EVENT_ACTION: ${{ github.event.action }}
+          JIRA_PROJECT_KEY: ${{ vars.JIRA_PROJECT_KEY }}
+          JIRA_USERNAME: ${{ vars.JIRA_USERNAME }}
+          JIRA_URL: ${{ vars.JIRA_URL }}
+          JIRA_ISSUE_KEY: ${{ env.JIRA_ISSUE_KEY }}
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+          COMMENT_BODY: ${{ github.event.comment.body }}
+        with:
+      # mail server settings
+          server_address: smtp.gmail.com
+          server_port: 465
+    # user credentials
+          username: ${{ secrets.EMAIL_USERNAME }}
+          password: ${{ secrets.EMAIL_PASSWORD }}
+    # email subject
+          subject: A new ${{ github.event_name }} is created for ${{ github.repository }} for job ${{ github.job }} and pipeline is ${{ job.status }}
+    # email body as text
+    #body: ${{ github.job }} job in worflow ${{ github.workflow }} for ${{ github.repository }} has created new jira
+          body: |
+           <html>
+            <body>
+               <h2>GitHub Event Notification</h2>
+               <p><strong>Event Type:</strong> ${{ github.event_name }}</p>
+               <p><strong>Action:</strong> ${{ github.event.action }}</p>
+               <p><strong>Repository:</strong> ${{ github.repository }}</p>
+               <p><strong>Issue Title:</strong> ${{ github.event.issue.title }}</p>
+               <p><strong>Comment added to Issue :</strong> ${{ github.event.comment.body }}</p>
+               <p><strong>Issue Link:</strong> $JIRA_URL/browse/$JIRA_ISSUE_KEY</p>
+            </body>
+           </html>
+    # comma-separated string, send email to
+          to: ${{ secrets.EMAIL_TO }}
+    # from email name
+          from: ${{ secrets.EMAIL_USERNAME }}
+          content_type: text/html
