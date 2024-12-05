@@ -10,10 +10,6 @@ on:
     types:
       - opened
       - edited
-  issue_comment:
-    types:
-      - created
-      - edited
 
 jobs:
   create_jira_ticket_github_prs:
@@ -130,34 +126,19 @@ jobs:
         run: |
           echo "ISSUE_TITLE=$ISSUE_TITLE" >> $GITHUB_ENV
           echo "COMMENT_BODY=$COMMENT_BODY" >> $GITHUB_ENV
-
-      - name: Find Associated Jira Issue by Title
-        id: find_jira
-        env:
-          JIRA_URL: ${{ secrets.JIRA_URL }}
-          JIRA_USERNAME: ${{ secrets.JIRA_USERNAME }}
-          JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
-          ISSUE_TITLE: ${{ env.ISSUE_TITLE }}
-          JIRA_PROJECT_KEY: ${{ vars.JIRA_PROJECT_KEY }}
-        run: |
-          # Replace spaces with '+' for URL encoding
-          ENCODED_TITLE=$(echo "$ISSUE_TITLE" | sed 's/ /+/g')
-
-          # Search for the Jira issue by title
-          JIRA_ISSUE_KEY=$(curl -s -u "$JIRA_USERNAME:$JIRA_API_TOKEN" \
-            "$JIRA_URL/rest/api/3/search?jql=project=$JIRA_PROJECT_KEY+AND+summary~\"$ENCODED_TITLE\"" \
-            | jq -r '.issues[0].key')
-
-          if [ -z "$JIRA_ISSUE_KEY" ] || [ "$JIRA_ISSUE_KEY" == "null" ]; then
-            echo "Jira issue not found for GitHub issue title: $ISSUE_TITLE"
-            exit 0
-          fi
-
-          echo "JIRA_ISSUE_KEY=$JIRA_ISSUE_KEY" >> $GITHUB_ENV
    
       - name: Send mail
         if: always()
         uses: dawidd6/action-send-mail@v2
+        env:
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
+          GITHUB_EVENT_ACTION: ${{ github.event.action }}
+          JIRA_PROJECT_KEY: ${{ vars.JIRA_PROJECT_KEY }}
+          JIRA_USERNAME: ${{ vars.JIRA_USERNAME }}
+          JIRA_URL: ${{ vars.JIRA_URL }}
+          JIRA_ISSUE_KEY: ${{ env.JIRA_ISSUE_KEY }}
+          SUMMARY: ${{ env.SUMMARY }}
+          DESCRIPTION: ${{ env.DESCRIPTION }}
         with:
       # mail server settings
           server_address: smtp.gmail.com
@@ -166,12 +147,24 @@ jobs:
           username: ${{ secrets.EMAIL_USERNAME }}
           password: ${{ secrets.EMAIL_PASSWORD }}
     # email subject
-          subject: New issue is raised for ${{ github.repository }} for job ${{ github.job }} and pipeline is ${{ job.status }}
+          subject: A new ${{ github.event_name }} is created for ${{ github.repository }} for job ${{ github.job }} and pipeline is ${{ job.status }}
     # email body as text
-          body: ${{ github.job }} job in worflow ${{ github.workflow }} for ${{ github.repository }} has created new jira
+    #body: ${{ github.job }} job in worflow ${{ github.workflow }} for ${{ github.repository }} has created new jira
+          body: |
+           <html>
+            <body>
+               <h2>GitHub Event Notification</h2>
+               <p><strong>Event Type:</strong> ${{ env.EVENT_TYPE }}</p>
+               <p><strong>Action:</strong> ${{ github.event.action }}</p>
+               <p><strong>Repository:</strong> ${{ github.repository }}</p>
+               <p><strong>Summary:</strong> ${{ env.SUMMARY }}</p>
+               <p><strong>Description:</strong> ${{ env.DESCRIPTION }}</p>
+               
+            </body>
+           </html>
     # comma-separated string, send email to
-          to: ramyashree.saliyan@ipinfusion.com,vishal.doni@ipinfusion.com
+          to: ${{ secrets.EMAIL_TO }}
     # from email name
-          from: vishal.doni@ipinfusion.com
-          
+          from: ${{ secrets.EMAIL_USERNAME }}
+          content_type: text/html 
 
