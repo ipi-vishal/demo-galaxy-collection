@@ -145,7 +145,7 @@ jobs:
                <p><strong>Repository:</strong> ${{ github.repository }}</p>
                <p><strong>Issue Title:</strong> ${{ github.event.issue.title }}</p>
                <p><strong>Comment added to Issue :</strong> ${{ github.event.comment.body }}</p>
-               <p><strong>Issue Link:</strong> $JIRA_URL/browse/$JIRA_ISSUE_KEY</p>
+               <p><strong>Issue Link:</strong> <a href="${{ vars.JIRA_URL }}/browse/${{ env.JIRA_ISSUE_KEY }}">${{ vars.JIRA_URL }}/browse/${{ env.JIRA_ISSUE_KEY }}</a></p>
             </body>
            </html>
     # comma-separated string, send email to
