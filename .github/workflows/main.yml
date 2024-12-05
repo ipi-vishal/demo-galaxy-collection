@@ -126,30 +126,6 @@ jobs:
         run: |
           echo "ISSUE_TITLE=$ISSUE_TITLE" >> $GITHUB_ENV
           echo "COMMENT_BODY=$COMMENT_BODY" >> $GITHUB_ENV
-
-      - name: Find Associated Jira Issue by Title
-        id: find_jira
-        env:
-          JIRA_URL: ${{ secrets.JIRA_URL }}
-          JIRA_USERNAME: ${{ secrets.JIRA_USERNAME }}
-          JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
-          ISSUE_TITLE: ${{ env.ISSUE_TITLE }}
-          JIRA_PROJECT_KEY: ${{ vars.JIRA_PROJECT_KEY }}
-        run: |
-          # Replace spaces with '+' for URL encoding
-          ENCODED_TITLE=$(echo "$ISSUE_TITLE" | sed 's/ /+/g')
-
-          # Search for the Jira issue by title
-          JIRA_ISSUE_KEY=$(curl -s -u "$JIRA_USERNAME:$JIRA_API_TOKEN" \
-            "$JIRA_URL/rest/api/3/search?jql=project=$JIRA_PROJECT_KEY+AND+summary~\"$ENCODED_TITLE\"" \
-            | jq -r '.issues[0].key')
-
-          if [ -z "$JIRA_ISSUE_KEY" ] || [ "$JIRA_ISSUE_KEY" == "null" ]; then
-            echo "Jira issue not found for GitHub issue title: $ISSUE_TITLE"
-            exit 0
-          fi
-
-          echo "JIRA_ISSUE_KEY=$JIRA_ISSUE_KEY" >> $GITHUB_ENV
    
       - name: Send mail
         if: always()
@@ -183,7 +159,7 @@ jobs:
                <p><strong>Repository:</strong> ${{ github.repository }}</p>
                <p><strong>Summary:</strong> ${{ env.SUMMARY }}</p>
                <p><strong>Description:</strong> ${{ env.DESCRIPTION }}</p>
-               <p><strong>Issue Number:</strong> ${{ env.ISSUE_NUMBER }}</p>
+               
             </body>
            </html>
     # comma-separated string, send email to
