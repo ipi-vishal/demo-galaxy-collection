@@ -161,6 +161,8 @@ jobs:
           JIRA_USERNAME: ${{ vars.JIRA_USERNAME }}
           JIRA_URL: ${{ vars.JIRA_URL }}
           JIRA_ISSUE_KEY: ${{ env.JIRA_ISSUE_KEY }}
+          SUMMARY: ${{ env.SUMMARY }}
+          DESCRIPTION: ${{ env.DESCRIPTION }}
         with:
       # mail server settings
           server_address: smtp.gmail.com
