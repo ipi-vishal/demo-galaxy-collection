@@ -34,14 +34,17 @@ jobs:
       - name: Find Jira Issue by Title
         id: find_jira
         env:
-          JIRA_URL: ${{ secrets.JIRA_URL }}
-          JIRA_USERNAME: ${{ secrets.JIRA_USERNAME }}
-          JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+          JIRA_URL: ${{ vars.JIRA_URL }}
+          JIRA_USERNAME: ${{ vars.JIRA_USERNAME }}
+          JIRA_API_TOKEN: ${{ vars.JIRA_API_TOKEN }}
           ISSUE_TITLE: ${{ env.ISSUE_TITLE }}
           JIRA_PROJECT_KEY: ${{ vars.JIRA_PROJECT_KEY }}
         run: |
           echo "ISSUE_TITLE=${{ github.event.issue.title }}" >> $GITHUB_ENV
           echo "COMMENT_BODY=${{ github.event.comment.body }}" >> $GITHUB_ENV
+          # Escape ISSUE_TITLE
+          ESCAPED_TITLE=$(echo "$ISSUE_TITLE" | sed 's/"/\\"/g') >> $GITHUB_ENV
+          export  ESCAPED_TITLE=$(echo "$ISSUE_TITLE" | sed 's/"/\\"/g')
           # Debug Variables
           echo "Debugging Environment Variables:"
           echo "ISSUE_TITLE: $ISSUE_TITLE"
@@ -49,14 +52,11 @@ jobs:
           echo "JIRA_USERNAME: $JIRA_USERNAME"
           echo "JIRA_API_TOKEN: $JIRA_API_TOKEN"
           echo "JIRA_PROJECT_KEY: $JIRA_PROJECT_KEY"
-
-          # Escape ISSUE_TITLE
-          ESCAPED_TITLE=$(echo "$ISSUE_TITLE" | sed 's/"/\\"/g')
-          echo "Escaped ISSUE_TITLE: $ESCAPED_TITLE"
+          echo "ESCAPED_TITLE: $ESCAPED_TITLE"
 
           # Search Jira issue by title
           #RESPONSE=$(curl -s -v -u "$JIRA_USERNAME:$JIRA_API_TOKEN" --get --data-urlencode "jql=project=$JIRA_PROJECT_KEY AND summary~\"$ESCAPED_TITLE\"" $JIRA_URL/rest/api/3/search)  
-          RESPONSE=$(curl -v -u "vishal.doni@ipinfusion.com:ATATT3xFfGF0Uo44GSz8VdLViu7bbiFo6oexzKPmGpR26fkrb1Na-DqLB1KVe11EMCvuY0Oy9p5Wtf6z7LBuauBp10mQAYR8DhaoigC7xa__VP83UJe2xf143P6nku8f85AN204hwPvpsDX2E2OeN4lUNLfBxc_bh4kqy3P0RsE42iNNbMSl7YA=0C22DD2A" --get --data-urlencode "jql=project=DEVOPS AND summary~\"comment trigger test\"" https://ipinfusion-sandbox-169.atlassian.net/rest/api/3/search)
+          RESPONSE=$(curl -v -u "$JIRA_USERNAME:$JIRA_API_TOKEN" --get --data-urlencode "jql=project=$JIRA_PROJECT_KEY AND summary~\"$ESCAPED_TITLE\"" $JIRA_URL/rest/api/3/search)
           echo "Jira Search Response: $RESPONSE"
 
           # Extract Jira Issue Key
