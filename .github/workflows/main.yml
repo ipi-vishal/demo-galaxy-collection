@@ -102,7 +102,8 @@ jobs:
               "project": { "key": "'"$JIRA_PROJECT_KEY"'" },
               "summary": "'"$SUMMARY"'",
               "description": '"$DESCRIPTION_ADF"',
-              "issuetype": { "name": "Task" }
+              "issuetype": { "name": "Task" },
+              "labels": ["github-action-jira"]
             }
           }' | jq .
           curl -X POST \
@@ -113,7 +114,8 @@ jobs:
                 "project": { "key": "'"$JIRA_PROJECT_KEY"'" },
                 "summary": "'"$SUMMARY"'",
                 "description": '"$DESCRIPTION_ADF"',
-                "issuetype": { "name": "Task" }
+                "issuetype": { "name": "Task" },
+                "labels": ["github-action-jira"]
               }
             }' \
             "$JIRA_URL/rest/api/3/issue/"
