@@ -105,7 +105,7 @@ jobs:
               "issuetype": { "name": "Task" }
             }
           }' | jq .
-          curl -X POST \
+          RESPONSE=$(curl -X POST \
             -u "$JIRA_USERNAME:$JIRA_API_TOKEN" \
             -H "Content-Type: application/json" \
             -d '{
@@ -116,7 +116,35 @@ jobs:
                 "issuetype": { "name": "Task" }
               }
             }' \
-            "$JIRA_URL/rest/api/3/issue/"
+            "$JIRA_URL/rest/api/3/issue/")
+          echo "Jira Response: $RESPONSE"
+          echo "Created Jira Key:"
+          echo "$RESPONSE" | jq -r '.key' > jira_key.txt
+
+      - name: Extract Jira Issue Key
+        run: |
+          JIRA_KEY=$(cat jira_key.txt)
+          echo "JIRA_KEY=$JIRA_KEY" >> $GITHUB_ENV
+
+      - name: Add Label to Created Jira Issue
+        env:
+          JIRA_URL: ${{ vars.JIRA_URL }}
+          JIRA_USERNAME: ${{ vars.JIRA_USERNAME }}
+          JIRA_API_TOKEN: ${{ vars.JIRA_API_TOKEN }}
+          JIRA_KEY: ${{ env.JIRA_KEY }}
+          LABELS: "github-jira" # Replace with desired label(s)
+        run: |
+          curl -X PUT \
+            -u "$JIRA_USERNAME:$JIRA_API_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "update": {
+                "labels": [
+                  { "add": "'"$LABELS"'" }
+                ]
+              }
+            }' \
+            "$JIRA_URL/rest/api/3/issue/$JIRA_KEY"
 
       - name: Extract GitHub Issue Details
         id: extract_details
