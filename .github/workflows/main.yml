@@ -10,15 +10,6 @@ on:
     types:
       - opened
       - edited
-  workflow_dispatch:
-    inputs:
-      state:
-        description: 'The status of the Jira issue'
-        required: true
-        default: 'Open'
-      body:
-        description: 'Additional details from Jira'
-        required: true
 
 jobs:
   create_jira_ticket_github_prs:
